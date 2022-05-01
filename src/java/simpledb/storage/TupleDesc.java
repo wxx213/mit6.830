@@ -10,6 +10,8 @@ import java.util.*;
  */
 public class TupleDesc implements Serializable {
 
+    public List<TDItem> tupleDescs = new ArrayList<TDItem>();
+
     /**
      * A help class to facilitate organizing the information of each field
      * */
@@ -62,6 +64,17 @@ public class TupleDesc implements Serializable {
      */
     public TupleDesc(Type[] typeAr, String[] fieldAr) {
         // some code goes here
+        if (typeAr.length != fieldAr.length) {
+            try {
+                throw new Exception("invalid args");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        for (int i=0;i<typeAr.length;i++) {
+            TDItem item = new TDItem(typeAr[i], fieldAr[i]);
+            tupleDescs.add(item);
+        }
     }
 
     /**
@@ -74,6 +87,13 @@ public class TupleDesc implements Serializable {
      */
     public TupleDesc(Type[] typeAr) {
         // some code goes here
+        if (typeAr == null) {
+            return;
+        }
+        for (int i=0;i<typeAr.length;i++) {
+            TDItem item = new TDItem(typeAr[i], "unnamed");
+            tupleDescs.add(item);
+        }
     }
 
     /**
@@ -81,7 +101,7 @@ public class TupleDesc implements Serializable {
      */
     public int numFields() {
         // some code goes here
-        return 0;
+        return tupleDescs.size();
     }
 
     /**
@@ -110,7 +130,10 @@ public class TupleDesc implements Serializable {
      */
     public Type getFieldType(int i) throws NoSuchElementException {
         // some code goes here
-        return null;
+        if (tupleDescs.size() < i+1) {
+            throw new NoSuchElementException();
+        }
+        return tupleDescs.get(i).fieldType;
     }
 
     /**
@@ -124,7 +147,18 @@ public class TupleDesc implements Serializable {
      */
     public int fieldNameToIndex(String name) throws NoSuchElementException {
         // some code goes here
-        return 0;
+        if (name == null) {
+            throw new NoSuchElementException();
+        }
+        if (tupleDescs.size() == 0) {
+            throw new NoSuchElementException();
+        }
+        for (TDItem item: tupleDescs) {
+            if (name.equals(item.fieldName)) {
+                return tupleDescs.indexOf(item);
+            }
+        }
+        throw new NoSuchElementException();
     }
 
     /**
@@ -133,7 +167,11 @@ public class TupleDesc implements Serializable {
      */
     public int getSize() {
         // some code goes here
-        return 0;
+        int size = 0;
+        for (TDItem item: tupleDescs) {
+            size = size + item.fieldType.getLen();
+        }
+        return size;
     }
 
     /**
@@ -148,7 +186,10 @@ public class TupleDesc implements Serializable {
      */
     public static TupleDesc merge(TupleDesc td1, TupleDesc td2) {
         // some code goes here
-        return null;
+        TupleDesc tupleDesc = new TupleDesc(null);
+        tupleDesc.tupleDescs.addAll(td1.tupleDescs);
+        tupleDesc.tupleDescs.addAll(td2.tupleDescs);
+        return tupleDesc;
     }
 
     /**
@@ -164,6 +205,17 @@ public class TupleDesc implements Serializable {
 
     public boolean equals(Object o) {
         // some code goes here
+        if (this.getClass() == o.getClass()) {
+            List<TDItem> descs = ((TupleDesc) o).tupleDescs;
+            if (this.tupleDescs.size() == descs.size()) {
+                for (int i=0;i<descs.size();i++) {
+                    if (this.tupleDescs.get(i).fieldType != descs.get(i).fieldType) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
         return false;
     }
 
