@@ -2,5 +2,4 @@
 
 set -e
 
-#ant runtest -Dtest=TupleDescTest
-ant runtest -Dtest=TupleTest
+ant runtest -Dtest=CatalogTest

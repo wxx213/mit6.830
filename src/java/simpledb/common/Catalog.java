@@ -23,6 +23,18 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class Catalog {
 
+    private class Table {
+        DbFile file;
+        String name;
+        String pkeyField;
+        public Table(DbFile file, String name, String pkeyField) {
+            this.file = file;
+            this.name = name;
+            this.pkeyField = pkeyField;
+        }
+    }
+    private Map<Integer, Table> mapTablesWithId = new HashMap<>();
+    private Map<String, Table> mapTablesWithName = new HashMap<>();
     /**
      * Constructor.
      * Creates a new, empty catalog.
@@ -42,6 +54,12 @@ public class Catalog {
      */
     public void addTable(DbFile file, String name, String pkeyField) {
         // some code goes here
+        if (file == null) {
+            return;
+        }
+        Table table = new Table(file, name, pkeyField);
+        mapTablesWithId.put(file.getId(), table);
+        mapTablesWithName.put(name, table);
     }
 
     public void addTable(DbFile file, String name) {
@@ -65,7 +83,11 @@ public class Catalog {
      */
     public int getTableId(String name) throws NoSuchElementException {
         // some code goes here
-        return 0;
+        Table table = mapTablesWithName.get(name);
+        if (table == null) {
+            throw new NoSuchElementException();
+        }
+        return table.file.getId();
     }
 
     /**
@@ -76,7 +98,12 @@ public class Catalog {
      */
     public TupleDesc getTupleDesc(int tableid) throws NoSuchElementException {
         // some code goes here
-        return null;
+        Table table = mapTablesWithId.get(tableid);
+        if (table == null) {
+            throw new NoSuchElementException();
+        }
+
+        return table.file.getTupleDesc();
     }
 
     /**
@@ -87,7 +114,11 @@ public class Catalog {
      */
     public DbFile getDatabaseFile(int tableid) throws NoSuchElementException {
         // some code goes here
-        return null;
+        Table table = mapTablesWithId.get(tableid);
+        if (table == null) {
+            throw new NoSuchElementException();
+        }
+        return table.file;
     }
 
     public String getPrimaryKey(int tableid) {
@@ -102,6 +133,10 @@ public class Catalog {
 
     public String getTableName(int id) {
         // some code goes here
+        Table table = mapTablesWithId.get(id);
+        if (table != null) {
+            return table.name;
+        }
         return null;
     }
     
