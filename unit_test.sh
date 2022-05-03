@@ -2,4 +2,6 @@
 
 set -e
 
-ant runtest -Dtest=CatalogTest
+#ant runtest -Dtest=HeapPageIdTest
+#ant runtest -Dtest=RecordIdTest
+ant runtest -Dtest=HeapPageReadTest

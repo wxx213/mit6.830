@@ -73,18 +73,16 @@ public class HeapPage implements Page {
     */
     private int getNumTuples() {        
         // some code goes here
-        return 0;
-
+        return  (BufferPool.getPageSize()*8) / (td.getSize() * 8 + 1);
     }
 
     /**
      * Computes the number of bytes in the header of a page in a HeapFile with each tuple occupying tupleSize bytes
      * @return the number of bytes in the header of a page in a HeapFile with each tuple occupying tupleSize bytes
      */
-    private int getHeaderSize() {        
-        
+    private int getHeaderSize() {
         // some code goes here
-        return 0;
+        return (int) Math.ceil(getNumTuples() / 8.0);
                  
     }
     
@@ -118,7 +116,8 @@ public class HeapPage implements Page {
      */
     public HeapPageId getId() {
     // some code goes here
-    throw new UnsupportedOperationException("implement this");
+    //throw new UnsupportedOperationException("implement this");
+        return this.pid;
     }
 
     /**
@@ -288,7 +287,13 @@ public class HeapPage implements Page {
      */
     public int getNumEmptySlots() {
         // some code goes here
-        return 0;
+        int emptyNum = 0;
+        for (int i = 0; i < getNumTuples(); i++) {
+            if (!isSlotUsed(i)) {
+                emptyNum++;
+            }
+        }
+        return emptyNum;
     }
 
     /**
@@ -296,7 +301,10 @@ public class HeapPage implements Page {
      */
     public boolean isSlotUsed(int i) {
         // some code goes here
-        return false;
+        int byteIndex = i / 8;
+        int posIndex = i % 8;
+        byte target = this.header[byteIndex];
+        return (byte) (target << (7 - posIndex)) < 0;
     }
 
     /**
@@ -307,13 +315,30 @@ public class HeapPage implements Page {
         // not necessary for lab1
     }
 
+    private class TupleIterator implements Iterator<Tuple> {
+        private int point;
+        private int len;
+
+        public TupleIterator() {
+            point = 0;
+            len = tuples.length;
+        }
+        @Override
+        public boolean hasNext() {
+            return point < len && isSlotUsed(point);
+        }
+        @Override
+        public Tuple next() {
+            return tuples[point++];
+        }
+    }
     /**
      * @return an iterator over all tuples on this page (calling remove on this iterator throws an UnsupportedOperationException)
      * (note that this iterator shouldn't return tuples in empty slots!)
      */
     public Iterator<Tuple> iterator() {
         // some code goes here
-        return null;
+        return new TupleIterator();
     }
 
 }
