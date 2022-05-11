@@ -1,6 +1,7 @@
 package simpledb.execution;
 
 import simpledb.common.Database;
+import simpledb.storage.DbFile;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.transaction.TransactionId;
 import simpledb.common.Type;
@@ -20,6 +21,10 @@ public class SeqScan implements OpIterator {
 
     private static final long serialVersionUID = 1L;
 
+    private TransactionId transactionId;
+    private int tableId;
+    private String tableAlias;
+    private DbFileIterator heapFileIterator;
     /**
      * Creates a sequential scan over the specified table as a part of the
      * specified transaction.
@@ -38,6 +43,9 @@ public class SeqScan implements OpIterator {
      */
     public SeqScan(TransactionId tid, int tableid, String tableAlias) {
         // some code goes here
+        this.transactionId = tid;
+        this.tableId = tableid;
+        this.tableAlias = tableAlias;
     }
 
     /**
@@ -55,7 +63,7 @@ public class SeqScan implements OpIterator {
     public String getAlias()
     {
         // some code goes here
-        return null;
+        return this.tableAlias;
     }
 
     /**
@@ -80,6 +88,11 @@ public class SeqScan implements OpIterator {
 
     public void open() throws DbException, TransactionAbortedException {
         // some code goes here
+        if (this.heapFileIterator == null) {
+            DbFile heapFile = Database.getCatalog().getDatabaseFile(this.tableId);
+            this.heapFileIterator = heapFile.iterator(this.transactionId);
+            this.heapFileIterator.open();
+        }
     }
 
     /**
@@ -94,26 +107,57 @@ public class SeqScan implements OpIterator {
      */
     public TupleDesc getTupleDesc() {
         // some code goes here
-        return null;
+        class SSTupleDesc extends TupleDesc {
+            private String aliasName;
+            public SSTupleDesc(Type[] typeAr, String name) {
+                super(typeAr);
+                this.aliasName = name;
+            }
+            @Override
+            public String getFieldName(int i) throws NoSuchElementException {
+                String name = super.getFieldName(i);
+                return this.aliasName + "." + name;
+            }
+            public void merge(TupleDesc td) {
+                this.tupleDescs.addAll(td.tupleDescs);
+            }
+        }
+        DbFile heapFile = Database.getCatalog().getDatabaseFile(this.tableId);
+        TupleDesc td = heapFile.getTupleDesc();
+        SSTupleDesc ssTd = new SSTupleDesc(null, this.tableAlias);
+        ssTd.merge(td);
+        return ssTd;
     }
 
     public boolean hasNext() throws TransactionAbortedException, DbException {
         // some code goes here
+        if (this.heapFileIterator != null) {
+            return this.heapFileIterator.hasNext();
+        }
         return false;
     }
 
     public Tuple next() throws NoSuchElementException,
             TransactionAbortedException, DbException {
         // some code goes here
+        if (this.heapFileIterator != null) {
+            return this.heapFileIterator.next();
+        }
         return null;
     }
 
     public void close() {
         // some code goes here
+        if (this.heapFileIterator != null) {
+            this.heapFileIterator = null;
+        }
     }
 
     public void rewind() throws DbException, NoSuchElementException,
             TransactionAbortedException {
         // some code goes here
+        if (this.heapFileIterator != null) {
+            this.heapFileIterator.rewind();
+        }
     }
 }

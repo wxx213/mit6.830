@@ -9,6 +9,8 @@ import simpledb.transaction.TransactionId;
 
 import java.io.*;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -33,6 +35,9 @@ public class BufferPool {
     constructor instead. */
     public static final int DEFAULT_PAGES = 50;
 
+    private int maxNumPages;
+    private int currentNumPages;
+    private Map<Integer, Map<Integer, Page>> hashPages;
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
@@ -40,6 +45,9 @@ public class BufferPool {
      */
     public BufferPool(int numPages) {
         // some code goes here
+        maxNumPages = numPages;
+        currentNumPages = 0;
+        hashPages = new HashMap<>();
     }
     
     public static int getPageSize() {
@@ -74,7 +82,26 @@ public class BufferPool {
     public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
         // some code goes here
-        return null;
+        int tableId = pid.getTableId();
+        int pgId = pid.getPageNumber();
+        Map<Integer, Page> tablePages = hashPages.get(tableId);
+        if (tablePages != null) {
+            Page page = tablePages.get(pgId);
+            if (page != null) {
+                return page;
+            }
+        }
+        DbFile heapFile = Database.getCatalog().getDatabaseFile(tableId);
+        Page page = heapFile.readPage(pid);
+        if (page != null && currentNumPages < maxNumPages) {
+            if (tablePages == null) {
+                tablePages = new HashMap<>();
+                hashPages.put(tableId, tablePages);
+            }
+            tablePages.put(pgId, page);
+            currentNumPages++;
+        }
+        return page;
     }
 
     /**

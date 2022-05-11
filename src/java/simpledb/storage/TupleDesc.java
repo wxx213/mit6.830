@@ -115,7 +115,10 @@ public class TupleDesc implements Serializable {
      */
     public String getFieldName(int i) throws NoSuchElementException {
         // some code goes here
-        return null;
+        if (tupleDescs.size() < i+1) {
+            throw new NoSuchElementException();
+        }
+        return tupleDescs.get(i).fieldName;
     }
 
     /**

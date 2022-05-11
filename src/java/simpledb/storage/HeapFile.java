@@ -136,18 +136,29 @@ public class HeapFile implements DbFile {
         private int currentPageNo;
         private int tableId;
         private Iterator<Tuple> currentTupleIterator;
+        private BufferPool bufferPool;
+        private TransactionId transactionId;
 
-        public HeapFileIterator(int pages, int id) {
+        public HeapFileIterator(TransactionId tid, int pages, int id) {
             this.numPages = pages;
             this.tableId = id;
             this.currentPageNo = 0;
             this.currentTupleIterator = null;
+            this.bufferPool = Database.getBufferPool();
+            this.transactionId = tid;
         }
 
         public void updateTupleIterator() {
             if (currentPageNo < numPages) {
                 HeapPageId pid = new HeapPageId(this.tableId, currentPageNo++);
-                HeapPage page = (HeapPage) readPage(pid);
+                HeapPage page = null;
+                try {
+                    page = (HeapPage) this.bufferPool.getPage(this.transactionId, pid, Permissions.READ_ONLY);
+                } catch (TransactionAbortedException e) {
+                    e.printStackTrace();
+                } catch (DbException e) {
+                    e.printStackTrace();
+                }
                 currentTupleIterator = page.iterator();
             }
         }
@@ -186,7 +197,8 @@ public class HeapFile implements DbFile {
 
         @Override
         public void rewind() {
-
+            this.currentPageNo = 0;
+            this.updateTupleIterator();
         }
 
         @Override
@@ -199,7 +211,7 @@ public class HeapFile implements DbFile {
     // see DbFile.java for javadocs
     public DbFileIterator iterator(TransactionId tid) {
         // some code goes here
-        return new HeapFileIterator(this.numPages(), this.getId());
+        return new HeapFileIterator(tid, this.numPages(), this.getId());
     }
 
 }
