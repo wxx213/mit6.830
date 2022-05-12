@@ -13,6 +13,10 @@ public class JoinPredicate implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    private int firstTupleIndex;
+    private int secondTupleIndex;
+    private Predicate.Op operation;
+
     /**
      * Constructor -- create a new predicate over two fields of two tuples.
      * 
@@ -29,6 +33,9 @@ public class JoinPredicate implements Serializable {
      */
     public JoinPredicate(int field1, Predicate.Op op, int field2) {
         // some code goes here
+        firstTupleIndex = field1;
+        secondTupleIndex = field2;
+        operation = op;
     }
 
     /**
@@ -39,6 +46,11 @@ public class JoinPredicate implements Serializable {
      */
     public boolean filter(Tuple t1, Tuple t2) {
         // some code goes here
+        Field f1 = t1.getField(this.firstTupleIndex);
+        Field f2 = t2.getField(this.secondTupleIndex);
+        if (f1 != null && f2 != null) {
+            return f1.compare(this.operation, f2);
+        }
         return false;
     }
     

@@ -7,9 +7,14 @@ LIB="$PWD/lib"
 
 
 
-TEST1="simpledb.TupleTest simpledb.TupleDescTest simpledb.CatalogTest simpledb.RecordIdTest \
-	simpledb.HeapPageReadTest simpledb.HeapPageIdTest simpledb.HeapFileReadTest"
-TESTS="simpledb.systemtest.ScanTest $TEST1"
+LAB1_TESTS="simpledb.TupleTest simpledb.TupleDescTest simpledb.CatalogTest simpledb.RecordIdTest \
+	simpledb.HeapPageReadTest simpledb.HeapPageIdTest simpledb.HeapFileReadTest \
+	simpledb.systemtest.ScanTest"
+
+LAB2_TESTS="simpledb.PredicateTest simpledb.JoinPredicateTest simpledb.FilterTest simpledb.JoinTest \
+	simpledb.systemtest.FilterTest simpledb.systemtest.JoinTest"
+
+TESTS="$LAB1_TESTS $LAB2_TESTS"
 
 if [ "$1" = "debug" ]; then
 	JAVA="java -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"

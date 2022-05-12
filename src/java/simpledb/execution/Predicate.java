@@ -12,6 +12,10 @@ public class Predicate implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    private int fieldIndex;
+    private Op operation;
+    private Field comparesField;
+
     /** Constants used for return codes in Field.compare */
     public enum Op implements Serializable {
         EQUALS, GREATER_THAN, LESS_THAN, LESS_THAN_OR_EQ, GREATER_THAN_OR_EQ, LIKE, NOT_EQUALS;
@@ -59,6 +63,9 @@ public class Predicate implements Serializable {
      */
     public Predicate(int field, Op op, Field operand) {
         // some code goes here
+        fieldIndex = field;
+        operation = op;
+        comparesField = operand;
     }
 
     /**
@@ -100,6 +107,10 @@ public class Predicate implements Serializable {
      */
     public boolean filter(Tuple t) {
         // some code goes here
+        Field f = t.getField(fieldIndex);
+        if (f != null) {
+            return f.compare(this.operation, this.comparesField);
+        }
         return false;
     }
 
