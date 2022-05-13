@@ -14,6 +14,12 @@ public class Join extends Operator {
 
     private static final long serialVersionUID = 1L;
 
+    private JoinPredicate joinPredicate;
+    private OpIterator leftIterator;
+    private OpIterator rightIterator;
+    private TupleDesc mergedTupleDesc;
+    private Tuple currentLeftTuple;
+
     /**
      * Constructor. Accepts two children to join and the predicate to join them
      * on
@@ -27,6 +33,13 @@ public class Join extends Operator {
      */
     public Join(JoinPredicate p, OpIterator child1, OpIterator child2) {
         // some code goes here
+        joinPredicate = p;
+        leftIterator = child1;
+        rightIterator = child2;
+        TupleDesc td1 = leftIterator.getTupleDesc();
+        TupleDesc td2 = rightIterator.getTupleDesc();
+        mergedTupleDesc = TupleDesc.merge(td1, td2);
+        currentLeftTuple = null;
     }
 
     public JoinPredicate getJoinPredicate() {
@@ -60,20 +73,30 @@ public class Join extends Operator {
      */
     public TupleDesc getTupleDesc() {
         // some code goes here
-        return null;
+        return this.mergedTupleDesc;
     }
 
     public void open() throws DbException, NoSuchElementException,
             TransactionAbortedException {
         // some code goes here
+        this.leftIterator.open();
+        this.rightIterator.open();
+        super.open();
     }
 
     public void close() {
         // some code goes here
+        super.close();
+        this.leftIterator.close();
+        this.rightIterator.close();
+
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
         // some code goes here
+        this.leftIterator.rewind();
+        this.rightIterator.rewind();
+        this.currentLeftTuple = null;
     }
 
     /**
@@ -96,6 +119,31 @@ public class Join extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // some code goes here
+        Tuple rTuple;
+        while (leftIterator.hasNext() || (rightIterator.hasNext() && currentLeftTuple != null)) {
+            if (!(rightIterator.hasNext() && currentLeftTuple != null)) {
+                currentLeftTuple = leftIterator.next();
+                if (!rightIterator.hasNext()) {
+                    rightIterator.rewind();
+                }
+            }
+            while (rightIterator.hasNext()) {
+                rTuple = rightIterator.next();
+                if (this.joinPredicate.filter(currentLeftTuple, rTuple)) {
+                    Tuple tuple = new Tuple(this.mergedTupleDesc);
+                    int ll = leftIterator.getTupleDesc().numFields();
+                    int lr = rightIterator.getTupleDesc().numFields();
+                    for (int i=0;i<ll;i++) {
+                        tuple.setField(i, currentLeftTuple.getField(i));
+                    }
+                    for (int i=ll;i<ll+lr;i++) {
+                        tuple.setField(i, rTuple.getField(i-ll));
+                    }
+                    return tuple;
+                }
+            }
+        }
+
         return null;
     }
 

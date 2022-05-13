@@ -14,6 +14,8 @@ public class Filter extends Operator {
 
     private static final long serialVersionUID = 1L;
 
+    private Predicate predicate;
+    private OpIterator opIterator;
     /**
      * Constructor accepts a predicate to apply and a child operator to read
      * tuples to filter from.
@@ -25,6 +27,8 @@ public class Filter extends Operator {
      */
     public Filter(Predicate p, OpIterator child) {
         // some code goes here
+        this.predicate = p;
+        this.opIterator = child;
     }
 
     public Predicate getPredicate() {
@@ -34,20 +38,25 @@ public class Filter extends Operator {
 
     public TupleDesc getTupleDesc() {
         // some code goes here
-        return null;
+        return this.opIterator.getTupleDesc();
     }
 
     public void open() throws DbException, NoSuchElementException,
             TransactionAbortedException {
         // some code goes here
+        opIterator.open();
+        super.open();
     }
 
     public void close() {
         // some code goes here
+        opIterator.close();
+        super.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
         // some code goes here
+        opIterator.rewind();
     }
 
     /**
@@ -62,6 +71,13 @@ public class Filter extends Operator {
     protected Tuple fetchNext() throws NoSuchElementException,
             TransactionAbortedException, DbException {
         // some code goes here
+        Tuple t = null;
+        while (opIterator.hasNext()) {
+            t = opIterator.next();
+            if (this.predicate.filter(t)) {
+                return t;
+            }
+        }
         return null;
     }
 
