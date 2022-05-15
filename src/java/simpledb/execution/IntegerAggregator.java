@@ -104,6 +104,13 @@ public class IntegerAggregator implements Aggregator {
                     newVal = newF.getValue();
                 }
                 break;
+            case COUNT:
+                if (oldF != null) {
+                    newVal = oldF.getValue() + 1;
+                } else {
+                    newVal = 1;
+                }
+                break;
             default:
                 throw new RuntimeException("not support in mergeFieldWithOp");
         }
