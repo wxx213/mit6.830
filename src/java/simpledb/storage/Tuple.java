@@ -80,7 +80,11 @@ public class Tuple implements Serializable {
      */
     public Field getField(int i) {
         // some code goes here
-        return fields.get(i);
+        if (i < fields.size()) {
+            return fields.get(i);
+        } else {
+            return null;
+        }
     }
 
     /**
