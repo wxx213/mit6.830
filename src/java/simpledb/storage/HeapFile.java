@@ -105,6 +105,10 @@ public class HeapFile implements DbFile {
     public void writePage(Page page) throws IOException {
         // some code goes here
         // not necessary for lab1
+        int pos = BufferPool.getPageSize() * page.getId().getPageNumber();
+        byte[] pageData = page.getPageData();
+        randomAccessFile.seek(pos);
+        randomAccessFile.write(pageData, 0, pageData.length);
     }
 
     /**
@@ -119,8 +123,27 @@ public class HeapFile implements DbFile {
     public List<Page> insertTuple(TransactionId tid, Tuple t)
             throws DbException, IOException, TransactionAbortedException {
         // some code goes here
-        return null;
         // not necessary for lab1
+        List<Page> result = new ArrayList<>();
+        int numPages = numPages();
+        int i;
+        HeapPage page = null;
+        for (i=0;i<numPages;i++) {
+            PageId pageId = new HeapPageId(this.getId(), i);
+            page = (HeapPage) readPage(pageId);
+            if (page.getNumEmptySlots() > 0) {
+                break;
+            }
+            page = null;
+        }
+        if (page == null) {
+            HeapPageId pageId = new HeapPageId(this.getId(), i);
+            page = new HeapPage(pageId, HeapPage.createEmptyPageData());
+        }
+        page.insertTuple(t);
+        writePage(page);
+        result.add(page);
+        return result;
     }
 
     // see DbFile.java for javadocs

@@ -9,7 +9,7 @@ LIB="$PWD/lib"
 
 LAB1_TESTS="simpledb.TupleTest simpledb.TupleDescTest simpledb.CatalogTest simpledb.RecordIdTest simpledb.HeapPageReadTest simpledb.HeapPageIdTest simpledb.HeapFileReadTest simpledb.systemtest.ScanTest"
 
-LAB2_TESTS="simpledb.PredicateTest simpledb.JoinPredicateTest simpledb.FilterTest simpledb.JoinTest simpledb.systemtest.FilterTest simpledb.systemtest.JoinTest simpledb.IntegerAggregatorTest simpledb.StringAggregatorTest simpledb.AggregateTest simpledb.systemtest.AggregateTest"
+LAB2_TESTS="simpledb.PredicateTest simpledb.JoinPredicateTest simpledb.FilterTest simpledb.JoinTest simpledb.systemtest.FilterTest simpledb.systemtest.JoinTest simpledb.IntegerAggregatorTest simpledb.StringAggregatorTest simpledb.AggregateTest simpledb.systemtest.AggregateTest simpledb.HeapPageWriteTest simpledb.HeapFileWriteTest simpledb.BufferPoolWriteTest"
 
 TESTS="$LAB1_TESTS $LAB2_TESTS"
 

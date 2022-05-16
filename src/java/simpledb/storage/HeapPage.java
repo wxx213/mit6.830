@@ -28,6 +28,7 @@ public class HeapPage implements Page {
     byte[] oldData;
     private final Byte oldDataLock= (byte) 0;
 
+    private TransactionId lastDirtyTid;
     /**
      * Create a HeapPage from a set of bytes of data read from disk.
      * The format of a HeapPage is a set of header bytes indicating
@@ -250,6 +251,14 @@ public class HeapPage implements Page {
     public void deleteTuple(Tuple t) throws DbException {
         // some code goes here
         // not necessary for lab1
+        RecordId recordId = t.getRecordId();
+        int slotId = recordId.getTupleNumber();
+        if (recordId.getPageId() == this.pid && isSlotUsed(slotId)) {
+            this.tuples[slotId] = null;
+            markSlotUsed(slotId, false);
+        } else {
+            throw new DbException("delete tuple not exist");
+        }
     }
 
     /**
@@ -262,6 +271,16 @@ public class HeapPage implements Page {
     public void insertTuple(Tuple t) throws DbException {
         // some code goes here
         // not necessary for lab1
+        for (int i=0; i<tuples.length; i++) {
+            if (!isSlotUsed(i)) {
+                RecordId rid = new RecordId(pid, i);
+                t.setRecordId(rid);
+                tuples[i] = t;
+                markSlotUsed(i, true);
+                return;
+            }
+        }
+        throw new DbException("page is full");
     }
 
     /**
@@ -271,6 +290,11 @@ public class HeapPage implements Page {
     public void markDirty(boolean dirty, TransactionId tid) {
         // some code goes here
 	// not necessary for lab1
+        if (dirty) {
+            this.lastDirtyTid = tid;
+        } else {
+            this.lastDirtyTid = null;
+        }
     }
 
     /**
@@ -279,7 +303,7 @@ public class HeapPage implements Page {
     public TransactionId isDirty() {
         // some code goes here
 	// Not necessary for lab1
-        return null;      
+        return this.lastDirtyTid;
     }
 
     /**
@@ -313,6 +337,15 @@ public class HeapPage implements Page {
     private void markSlotUsed(int i, boolean value) {
         // some code goes here
         // not necessary for lab1
+        int byteIndex = i / 8;
+        int posIndex = i % 8;
+        byte target = this.header[byteIndex];
+        if (value) {
+            target = (byte) ((0x1 << posIndex) | target);
+        } else {
+            target = (byte) (~(0x1 << posIndex) & target);
+        }
+        this.header[byteIndex] = target;
     }
 
     private class TupleIterator implements Iterator<Tuple> {
