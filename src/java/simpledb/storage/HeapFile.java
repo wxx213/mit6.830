@@ -150,8 +150,18 @@ public class HeapFile implements DbFile {
     public ArrayList<Page> deleteTuple(TransactionId tid, Tuple t) throws DbException,
             TransactionAbortedException {
         // some code goes here
-        return null;
         // not necessary for lab1
+        ArrayList<Page> pages = new ArrayList<>();
+        HeapPageId pageId = (HeapPageId) t.getRecordId().getPageId();
+        HeapPage page = (HeapPage) readPage(pageId);
+        page.deleteTuple(t);
+        try {
+            writePage(page);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        pages.add(page);
+        return pages;
     }
 
     private class HeapFileIterator implements DbFileIterator {

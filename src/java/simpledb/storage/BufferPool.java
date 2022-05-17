@@ -10,6 +10,7 @@ import simpledb.transaction.TransactionId;
 import java.io.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -84,26 +85,47 @@ public class BufferPool {
         // some code goes here
         int tableId = pid.getTableId();
         int pgId = pid.getPageNumber();
+        Page page = getCachePage(tableId, pgId);
+        if (page != null) {
+            return page;
+        }
+        DbFile heapFile = Database.getCatalog().getDatabaseFile(tableId);
+        page = heapFile.readPage(pid);
+        putCachePage(page, tableId, pgId);
+        return page;
+    }
+
+    private int getCachePageNumber(int tableId) {
         Map<Integer, Page> tablePages = hashPages.get(tableId);
         if (tablePages != null) {
-            Page page = tablePages.get(pgId);
+            return tablePages.size();
+        }
+        return 0;
+    }
+
+    private Page getCachePage(int tableId, int pageId) {
+        Map<Integer, Page> tablePages = hashPages.get(tableId);
+        if (tablePages != null) {
+            Page page = tablePages.get(pageId);
             if (page != null) {
                 return page;
             }
         }
-        DbFile heapFile = Database.getCatalog().getDatabaseFile(tableId);
-        Page page = heapFile.readPage(pid);
+        return null;
+    }
+    private void putCachePage(Page page, int tableId, int pageId) {
+        Map<Integer, Page> tablePages = hashPages.get(tableId);
         if (page != null && currentNumPages < maxNumPages) {
             if (tablePages == null) {
                 tablePages = new HashMap<>();
                 hashPages.put(tableId, tablePages);
             }
-            tablePages.put(pgId, page);
-            currentNumPages++;
+            if (tablePages.get(pageId) == null) {
+                currentNumPages++;
+            }
+            tablePages.put(pageId, page);
         }
-        return page;
     }
-
     /**
      * Releases the lock on a page.
      * Calling this is very risky, and may result in wrong behavior. Think hard
@@ -166,6 +188,12 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
+        HeapFile heapFile = (HeapFile) Database.getCatalog().getDatabaseFile(tableId);
+
+        List<Page> pageList = heapFile.insertTuple(tid, t);
+        for (Page page : pageList) {
+            putCachePage(page, tableId, page.getId().getPageNumber());
+        }
     }
 
     /**
@@ -185,6 +213,12 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
+        int tableId = t.getRecordId().getPageId().getTableId();
+        HeapFile heapFile = (HeapFile) Database.getCatalog().getDatabaseFile(tableId);
+        List<Page> pageList = heapFile.deleteTuple(tid, t);
+        for (Page page : pageList) {
+            putCachePage(page, tableId, page.getId().getPageNumber());
+        }
     }
 
     /**
