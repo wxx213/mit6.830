@@ -9,9 +9,11 @@ LIB="$PWD/lib"
 
 LAB1_TESTS="simpledb.TupleTest simpledb.TupleDescTest simpledb.CatalogTest simpledb.RecordIdTest simpledb.HeapPageReadTest simpledb.HeapPageIdTest simpledb.HeapFileReadTest simpledb.systemtest.ScanTest"
 
-LAB2_TESTS="simpledb.PredicateTest simpledb.JoinPredicateTest simpledb.FilterTest simpledb.JoinTest simpledb.systemtest.FilterTest simpledb.systemtest.JoinTest simpledb.IntegerAggregatorTest simpledb.StringAggregatorTest simpledb.AggregateTest simpledb.systemtest.AggregateTest simpledb.HeapPageWriteTest simpledb.HeapFileWriteTest simpledb.BufferPoolWriteTest"
+LAB2_TESTS="simpledb.PredicateTest simpledb.JoinPredicateTest simpledb.FilterTest simpledb.JoinTest simpledb.systemtest.FilterTest simpledb.systemtest.JoinTest simpledb.IntegerAggregatorTest simpledb.StringAggregatorTest simpledb.AggregateTest simpledb.systemtest.AggregateTest simpledb.HeapPageWriteTest simpledb.HeapFileWriteTest simpledb.BufferPoolWriteTest simpledb.systemtest.EvictionTest"
 
-TESTS="$LAB1_TESTS $LAB2_TESTS"
+LAB3_TESTS="simpledb.IntHistogramTest simpledb.TableStatsTest"
+
+TESTS="$LAB1_TESTS $LAB2_TESTS $LAB3_TESTS"
 
 if [ "$1" = "debug" ]; then
 	JAVA="java -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
