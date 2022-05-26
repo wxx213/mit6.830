@@ -1,15 +1,16 @@
 package simpledb.optimizer;
 
 import simpledb.common.Database;
+import simpledb.common.DbException;
 import simpledb.common.Type;
 import simpledb.execution.Predicate;
 import simpledb.execution.SeqScan;
 import simpledb.storage.*;
 import simpledb.transaction.Transaction;
+import simpledb.transaction.TransactionAbortedException;
+import simpledb.transaction.TransactionId;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -68,6 +69,69 @@ public class TableStats {
      */
     static final int NUM_HIST_BINS = 100;
 
+    private int tableId;
+    private int ioCostPerPage;
+    private Map<Integer, ColHistogramInfo> mapColumnHistogram;
+    private int numTuples;
+
+    private class ColHistogramInfo {
+        public Type fieldType;
+        public IntHistogram intHistogram;
+        public StringHistogram stringHistogram;
+    }
+
+    private Map<Integer, ArrayList> fetchFieldValues(int tableId) {
+        Map<Integer, ArrayList> result = new HashMap<>();
+        SeqScan seqScan = new SeqScan(new TransactionId(), tableId);
+        for (int i=0;i<seqScan.getTupleDesc().numFields();i++) {
+            Type type = seqScan.getTupleDesc().getFieldType(i);
+            if (type == Type.INT_TYPE) {
+                result.put(i, new ArrayList<Integer>());
+            } else {
+                result.put(i, new ArrayList<String>());
+            }
+        }
+
+        try {
+            seqScan.open();
+        } catch (DbException e) {
+            e.printStackTrace();
+        } catch (TransactionAbortedException e) {
+            e.printStackTrace();
+        }
+
+        while (true) {
+            try {
+                if (!seqScan.hasNext()) break;
+            } catch (TransactionAbortedException e) {
+                e.printStackTrace();
+            } catch (DbException e) {
+                e.printStackTrace();
+            }
+            try {
+                Tuple tuple = seqScan.next();
+                for (int i=0;i<tuple.getTupleDesc().numFields();i++) {
+                    ArrayList list = result.get(i);
+                    Type type = tuple.getField(i).getType();
+                    if (type == Type.INT_TYPE) {
+                        IntField intField = (IntField)tuple.getField(i);
+                        list.add(intField.getValue());
+                    } else {
+                        StringField stringField = (StringField) tuple.getField(i);
+                        list.add(stringField.getValue());
+                    }
+                }
+                this.numTuples ++;
+            } catch (TransactionAbortedException e) {
+                e.printStackTrace();
+            } catch (DbException e) {
+                e.printStackTrace();
+            }
+        }
+        seqScan.close();
+        return result;
+    }
+
     /**
      * Create a new TableStats object, that keeps track of statistics on each
      * column of a table
@@ -87,6 +151,45 @@ public class TableStats {
         // necessarily have to (for example) do everything
         // in a single scan of the table.
         // some code goes here
+        this.tableId = tableid;
+        this.ioCostPerPage = ioCostPerPage;
+        this.mapColumnHistogram = new HashMap<>();
+        this.numTuples = 0;
+
+        HeapFile heapFile = (HeapFile) Database.getCatalog().getDatabaseFile(this.tableId);
+        TupleDesc tupleDesc = heapFile.getTupleDesc();
+
+        Map<Integer, ArrayList> fieldValues = fetchFieldValues(this.tableId);
+        for (int key : fieldValues.keySet()) {
+            ColHistogramInfo colHistogramInfo = this.mapColumnHistogram.get(key);
+            if (colHistogramInfo == null) {
+                colHistogramInfo = new ColHistogramInfo();
+                this.mapColumnHistogram.put(key, colHistogramInfo);
+            }
+            if (tupleDesc.getFieldType(key) == Type.INT_TYPE) {
+                ArrayList<Integer> arrayList = fieldValues.get(key);
+                if (colHistogramInfo.intHistogram == null) {
+                    IntHistogram intHistogram = new IntHistogram(NUM_HIST_BINS,
+                            Collections.min(arrayList),
+                            Collections.max(arrayList));
+                    colHistogramInfo.fieldType = Type.INT_TYPE;
+                    colHistogramInfo.intHistogram = intHistogram;
+                }
+                for (int value : arrayList) {
+                    colHistogramInfo.intHistogram.addValue(value);
+                }
+            } else {
+                ArrayList<String> arrayList = fieldValues.get(key);
+                if (colHistogramInfo.stringHistogram == null) {
+                    StringHistogram stringHistogram = new StringHistogram(NUM_HIST_BINS);
+                    colHistogramInfo.fieldType = Type.STRING_TYPE;
+                    colHistogramInfo.stringHistogram = stringHistogram;
+                }
+                for (String value : arrayList) {
+                    colHistogramInfo.stringHistogram.addValue(value);
+                }
+            }
+        }
     }
 
     /**
@@ -103,7 +206,9 @@ public class TableStats {
      */
     public double estimateScanCost() {
         // some code goes here
-        return 0;
+        HeapFile heapFile = (HeapFile) Database.getCatalog().getDatabaseFile(this.tableId);
+        double result = heapFile.numPages() * this.ioCostPerPage;
+        return result;
     }
 
     /**
@@ -117,7 +222,7 @@ public class TableStats {
      */
     public int estimateTableCardinality(double selectivityFactor) {
         // some code goes here
-        return 0;
+        return (int) (this.numTuples * selectivityFactor);
     }
 
     /**
@@ -150,7 +255,16 @@ public class TableStats {
      */
     public double estimateSelectivity(int field, Predicate.Op op, Field constant) {
         // some code goes here
-        return 1.0;
+        HeapFile heapFile = (HeapFile) Database.getCatalog().getDatabaseFile(this.tableId);
+        TupleDesc tupleDesc = heapFile.getTupleDesc();
+        ColHistogramInfo colHistogramInfo = this.mapColumnHistogram.get(field);
+        if (tupleDesc.getFieldType(field) == Type.INT_TYPE) {
+            IntField intField = (IntField) constant;
+            return colHistogramInfo.intHistogram.estimateSelectivity(op, intField.getValue());
+        } else {
+            StringField stringField = (StringField) constant;
+            return colHistogramInfo.stringHistogram.estimateSelectivity(op, stringField.getValue());
+        }
     }
 
     /**
