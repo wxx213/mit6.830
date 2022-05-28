@@ -11,7 +11,7 @@ LAB1_TESTS="simpledb.TupleTest simpledb.TupleDescTest simpledb.CatalogTest simpl
 
 LAB2_TESTS="simpledb.PredicateTest simpledb.JoinPredicateTest simpledb.FilterTest simpledb.JoinTest simpledb.systemtest.FilterTest simpledb.systemtest.JoinTest simpledb.IntegerAggregatorTest simpledb.StringAggregatorTest simpledb.AggregateTest simpledb.systemtest.AggregateTest simpledb.HeapPageWriteTest simpledb.HeapFileWriteTest simpledb.BufferPoolWriteTest simpledb.systemtest.EvictionTest"
 
-LAB3_TESTS="simpledb.IntHistogramTest simpledb.TableStatsTest"
+LAB3_TESTS="simpledb.IntHistogramTest simpledb.TableStatsTest simpledb.JoinOptimizerTest simpledb.systemtest.QueryTest"
 
 TESTS="$LAB1_TESTS $LAB2_TESTS $LAB3_TESTS"
 
