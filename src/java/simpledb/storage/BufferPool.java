@@ -39,6 +39,7 @@ public class BufferPool {
     private int maxNumPages;
     private int currentNumPages;
     private Map<Integer, Map<Integer, Page>> hashPages;
+    private LockManager lockManager;
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
@@ -49,6 +50,7 @@ public class BufferPool {
         maxNumPages = numPages;
         currentNumPages = 0;
         hashPages = new HashMap<>();
+        lockManager = new LockManager();
     }
     
     public static int getPageSize() {
@@ -83,6 +85,22 @@ public class BufferPool {
     public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
         // some code goes here
+        LockManager.LockType lockType;
+        if (perm == Permissions.READ_ONLY) {
+            lockType = LockManager.LockType.READ_LOCK;
+        } else {
+            lockType = LockManager.LockType.WRITE_LOCK;
+        }
+        while (true) {
+            if (this.lockManager.acquireLock(pid, tid, lockType)) {
+                break;
+            }
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
         int tableId = pid.getTableId();
         int pgId = pid.getPageNumber();
         Page page = getCachePage(tableId, pgId);
@@ -138,6 +156,7 @@ public class BufferPool {
     public  void unsafeReleasePage(TransactionId tid, PageId pid) {
         // some code goes here
         // not necessary for lab1|lab2
+        this.lockManager.releaseLock(pid, tid);
     }
 
     /**
@@ -154,7 +173,7 @@ public class BufferPool {
     public boolean holdsLock(TransactionId tid, PageId p) {
         // some code goes here
         // not necessary for lab1|lab2
-        return false;
+        return this.lockManager.holdLock(p, tid);
     }
 
     /**
