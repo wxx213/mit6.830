@@ -13,11 +13,11 @@ LAB2_TESTS="simpledb.PredicateTest simpledb.JoinPredicateTest simpledb.FilterTes
 
 LAB3_TESTS="simpledb.IntHistogramTest simpledb.TableStatsTest simpledb.JoinOptimizerTest simpledb.systemtest.QueryTest"
 
-LAB4_TESTS="simpledb.LockingTest"
+LAB4_TESTS="simpledb.LockingTest simpledb.TransactionTest simpledb.systemtest.AbortEvictionTest"
 
 TESTS="$LAB1_TESTS $LAB2_TESTS $LAB3_TESTS $LAB4_TESTS"
 
-TESTS="simpledb.LockingTest"
+TESTS="simpledb.TransactionTest simpledb.systemtest.AbortEvictionTest"
 
 if [ "$1" = "debug" ]; then
 	JAVA="java -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"

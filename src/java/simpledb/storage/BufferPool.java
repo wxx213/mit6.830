@@ -131,6 +131,15 @@ public class BufferPool {
         }
         return null;
     }
+    private void removeCachePage(int tableId, int pageId) {
+        Map<Integer, Page> tablePages = hashPages.get(tableId);
+        if (tablePages != null) {
+            if (tablePages.containsKey(pageId)) {
+                tablePages.remove(pageId);
+                currentNumPages--;
+            }
+        }
+    }
     private void putCachePage(Page page, int tableId, int pageId) {
         Map<Integer, Page> tablePages = hashPages.get(tableId);
         if (page != null && currentNumPages < maxNumPages) {
@@ -167,6 +176,7 @@ public class BufferPool {
     public void transactionComplete(TransactionId tid) {
         // some code goes here
         // not necessary for lab1|lab2
+        this.lockManager.releaseLock(tid);
     }
 
     /** Return true if the specified transaction has a lock on the specified page */
@@ -186,6 +196,17 @@ public class BufferPool {
     public void transactionComplete(TransactionId tid, boolean commit) {
         // some code goes here
         // not necessary for lab1|lab2
+        if (commit) {
+            try {
+                flushPages(tid);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else {
+            discardPages(tid);
+        }
+        this.lockManager.releaseLock(tid);
+
     }
 
     /**
@@ -262,8 +283,17 @@ public class BufferPool {
     public synchronized void discardPage(PageId pid) {
         // some code goes here
         // not necessary for lab1
+        int tableId = pid.getTableId();
+        int pgId = pid.getPageNumber();
+        removeCachePage(tableId, pgId);
     }
 
+    public synchronized void discardPages(TransactionId tid) {
+        List<PageId> pageIdList = this.lockManager.holdLockPages(tid);
+        for (PageId pageId : pageIdList) {
+            discardPage(pageId);
+        }
+    }
     /**
      * Flushes a certain page to disk
      * @param pid an ID indicating the page to flush
@@ -271,6 +301,11 @@ public class BufferPool {
     private synchronized  void flushPage(PageId pid) throws IOException {
         // some code goes here
         // not necessary for lab1
+        int tableId = pid.getTableId();
+        int pgId = pid.getPageNumber();
+        HeapPage heapPage = (HeapPage) getCachePage(tableId, pgId);
+        HeapFile heapFile = (HeapFile) Database.getCatalog().getDatabaseFile(tableId);
+        heapFile.writePage(heapPage);
     }
 
     /** Write all pages of the specified transaction to disk.
@@ -278,6 +313,10 @@ public class BufferPool {
     public synchronized  void flushPages(TransactionId tid) throws IOException {
         // some code goes here
         // not necessary for lab1|lab2
+        List<PageId> pageIdList = this.lockManager.holdLockPages(tid);
+        for (PageId pageId : pageIdList) {
+            flushPage(pageId);
+        }
     }
 
     /**
