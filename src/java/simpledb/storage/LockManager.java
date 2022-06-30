@@ -60,6 +60,22 @@ public class LockManager {
         }
     }
 
+    public synchronized boolean tryAcquireLock(PageId pageId, TransactionId tid, LockType type, int timeoutMs) {
+        long start = System.currentTimeMillis();
+        while (true) {
+            if (System.currentTimeMillis() - start >= timeoutMs) {
+                return false;
+            }
+            if (acquireLock(pageId, tid, type)) {
+                return true;
+            }
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
     public synchronized boolean acquireLock(PageId pageId, TransactionId tid, LockType type) {
         Lock lock = this.lockMap.get(pageId);
         // the lock for pageId not exist

@@ -91,15 +91,8 @@ public class BufferPool {
         } else {
             lockType = LockManager.LockType.WRITE_LOCK;
         }
-        while (true) {
-            if (this.lockManager.acquireLock(pid, tid, lockType)) {
-                break;
-            }
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        if (!this.lockManager.tryAcquireLock(pid, tid, lockType, 1000)) {
+            throw new DbException("wait lock timeout");
         }
         int tableId = pid.getTableId();
         int pgId = pid.getPageNumber();
