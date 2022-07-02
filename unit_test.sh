@@ -9,10 +9,10 @@ LIB="$PWD/lib"
 
 LAB1_TESTS="simpledb.TupleTest simpledb.TupleDescTest simpledb.CatalogTest simpledb.RecordIdTest simpledb.HeapPageReadTest simpledb.HeapPageIdTest simpledb.HeapFileReadTest simpledb.systemtest.ScanTest"
 
-LAB2_TESTS="simpledb.PredicateTest simpledb.JoinPredicateTest simpledb.FilterTest simpledb.JoinTest simpledb.systemtest.FilterTest simpledb.systemtest.JoinTest simpledb.IntegerAggregatorTest simpledb.StringAggregatorTest simpledb.AggregateTest simpledb.systemtest.AggregateTest simpledb.HeapPageWriteTest simpledb.HeapFileWriteTest simpledb.BufferPoolWriteTest simpledb.systemtest.EvictionTest"
+LAB2_TESTS="simpledb.PredicateTest simpledb.JoinPredicateTest simpledb.FilterTest simpledb.JoinTest simpledb.systemtest.FilterTest simpledb.systemtest.JoinTest simpledb.IntegerAggregatorTest simpledb.StringAggregatorTest simpledb.AggregateTest simpledb.systemtest.AggregateTest simpledb.HeapPageWriteTest simpledb.HeapFileWriteTest simpledb.BufferPoolWriteTest simpledb.systemtest.EvictionTest simpledb.InsertTest simpledb.systemtest.InsertTest simpledb.systemtest.DeleteTest"
 
-# TODO: finish simpledb.JoinOptimizerTest and simpledb.systemtest.QueryTest
-LAB3_TESTS="simpledb.IntHistogramTest simpledb.TableStatsTest"
+# TODO: simpledb.JoinOptimizerTest
+LAB3_TESTS="simpledb.IntHistogramTest simpledb.TableStatsTest simpledb.systemtest.QueryTest"
 
 # TODO: finish simpledb.systemtest.AbortEvictionTest
 LAB4_TESTS="simpledb.LockingTest simpledb.TransactionTest simpledb.DeadlockTest simpledb.systemtest.TransactionTest"
