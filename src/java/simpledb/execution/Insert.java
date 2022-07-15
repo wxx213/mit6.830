@@ -7,6 +7,8 @@ import simpledb.storage.*;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.transaction.TransactionId;
 
+import java.io.IOException;
+
 /**
  * Inserts tuples read from the child operator into the tableId specified in the
  * constructor
@@ -88,9 +90,8 @@ public class Insert extends Operator {
             final Tuple next = this.child.next();
             try {
                 Database.getBufferPool().insertTuple(this.transactionId, this.tableId, next);
-            } catch (Exception e) {
+            } catch (IOException e) {
                 e.printStackTrace();
-                System.out.println("Error happen when insert tuple:" + e.getMessage());
             }
             cnt++;
         }

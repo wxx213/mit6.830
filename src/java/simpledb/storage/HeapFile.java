@@ -84,6 +84,9 @@ public class HeapFile implements DbFile {
     // see DbFile.java for javadocs
     public Page readPage(PageId pid) {
         // some code goes here
+        if (pid.getPageNumber() >= numPages()) {
+            return null;
+        }
         int pos = BufferPool.getPageSize() * pid.getPageNumber();
         byte[] pageData = new byte[BufferPool.getPageSize()];
         try {
@@ -125,23 +128,24 @@ public class HeapFile implements DbFile {
         // some code goes here
         // not necessary for lab1
         List<Page> result = new ArrayList<>();
-        int numPages = numPages();
-        int i;
         HeapPage page = null;
-        for (i=0;i<numPages;i++) {
+        int i = 0;
+        while (true) {
             PageId pageId = new HeapPageId(this.getId(), i);
-            page = (HeapPage) readPage(pageId);
+            page = (HeapPage) Database.getBufferPool().getPage(tid, pageId, Permissions.READ_WRITE);
+            if (page == null) {
+                page = new HeapPage((HeapPageId) pageId, HeapPage.createEmptyPageData());
+                this.writePage(page);
+                page = (HeapPage) Database.getBufferPool().getPage(tid, pageId, Permissions.READ_WRITE);
+            }
             if (page.getNumEmptySlots() > 0) {
                 break;
             }
             page = null;
-        }
-        if (page == null) {
-            HeapPageId pageId = new HeapPageId(this.getId(), i);
-            page = new HeapPage(pageId, HeapPage.createEmptyPageData());
+            i++;
         }
         page.insertTuple(t);
-        writePage(page);
+        page.markDirty(true, tid);
         result.add(page);
         return result;
     }
@@ -153,13 +157,9 @@ public class HeapFile implements DbFile {
         // not necessary for lab1
         ArrayList<Page> pages = new ArrayList<>();
         HeapPageId pageId = (HeapPageId) t.getRecordId().getPageId();
-        HeapPage page = (HeapPage) readPage(pageId);
+        HeapPage page = (HeapPage) Database.getBufferPool().getPage(tid, pageId, Permissions.READ_WRITE);
         page.deleteTuple(t);
-        try {
-            writePage(page);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        page.markDirty(true, tid);
         pages.add(page);
         return pages;
     }
@@ -177,34 +177,27 @@ public class HeapFile implements DbFile {
             this.tableId = id;
             this.currentPageNo = 0;
             this.currentTupleIterator = null;
-            this.bufferPool = Database.getBufferPool();
             this.transactionId = tid;
         }
 
-        public void updateTupleIterator() {
+        public void updateTupleIterator() throws TransactionAbortedException, DbException {
             if (currentPageNo < numPages) {
                 HeapPageId pid = new HeapPageId(this.tableId, currentPageNo++);
                 HeapPage page = null;
-                try {
-                    page = (HeapPage) this.bufferPool.getPage(this.transactionId, pid, Permissions.READ_ONLY);
-                } catch (TransactionAbortedException e) {
-                    e.printStackTrace();
-                } catch (DbException e) {
-                    e.printStackTrace();
-                }
+                page = (HeapPage) Database.getBufferPool().getPage(this.transactionId, pid, Permissions.READ_ONLY);
                 currentTupleIterator = page.iterator();
             }
         }
 
         @Override
-        public void open() {
+        public void open() throws TransactionAbortedException, DbException {
             if (currentTupleIterator == null) {
                 updateTupleIterator();
             }
         }
 
         @Override
-        public boolean hasNext() {
+        public boolean hasNext() throws TransactionAbortedException, DbException {
             if (currentTupleIterator == null) {
                 return false;
             }
@@ -229,7 +222,7 @@ public class HeapFile implements DbFile {
         }
 
         @Override
-        public void rewind() {
+        public void rewind() throws TransactionAbortedException, DbException {
             this.currentPageNo = 0;
             this.updateTupleIterator();
         }

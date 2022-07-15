@@ -84,9 +84,8 @@ public class Delete extends Operator {
             final Tuple next = this.child.next();
             try {
                 Database.getBufferPool().deleteTuple(this.tid, next);
-            } catch (Exception e) {
+            } catch (IOException e) {
                 e.printStackTrace();
-                System.out.println("Error happen when delete tuple:" + e.getMessage());
             }
             cnt++;
         }

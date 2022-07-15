@@ -60,23 +60,10 @@ public class LockManager {
         }
     }
 
-    public synchronized boolean tryAcquireLock(PageId pageId, TransactionId tid, LockType type, int timeoutMs) {
-        long start = System.currentTimeMillis();
-        while (true) {
-            if (System.currentTimeMillis() - start >= timeoutMs) {
-                return false;
-            }
-            if (acquireLock(pageId, tid, type)) {
-                return true;
-            }
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
     public synchronized boolean acquireLock(PageId pageId, TransactionId tid, LockType type) {
+        //System.out.printf("%d, %d, %d, %s\n", tid.getId(), pageId.getTableId(),
+        //        pageId.getPageNumber(), type.toString());
+
         Lock lock = this.lockMap.get(pageId);
         // the lock for pageId not exist
         if (lock == null) {
@@ -90,6 +77,11 @@ public class LockManager {
         // the lock for pageId exist and the type is not equal
         if (type != lock.lockType) {
             if (lock.transactionIdHashSet.size() == 1 && lock.transactionIdHashSet.contains(tid)) {
+                // if the page is hold by only one transaction, change read lock to write lock
+                if (type == LockType.WRITE_LOCK) {
+                    lock.lockType = LockType.WRITE_LOCK;
+                }
+                lock.addTransactionId(tid);
                 transactionAddPage(tid, pageId);
                 return true;
             }
@@ -100,6 +92,7 @@ public class LockManager {
         if (lock.lockType == LockType.WRITE_LOCK && !lock.transactionIdHashSet.contains(tid)) {
             return false;
         }
+        lock.addTransactionId(tid);
         transactionAddPage(tid, pageId);
         return true;
     }

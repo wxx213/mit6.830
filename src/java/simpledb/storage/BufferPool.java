@@ -9,6 +9,7 @@ import simpledb.transaction.TransactionId;
 
 import java.io.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,8 +92,8 @@ public class BufferPool {
         } else {
             lockType = LockManager.LockType.WRITE_LOCK;
         }
-        if (!this.lockManager.tryAcquireLock(pid, tid, lockType, 1000)) {
-            throw new DbException("wait lock timeout");
+        if (!tryAcquireLock(pid, tid, lockType, 1000)) {
+            throw new TransactionAbortedException();
         }
         int tableId = pid.getTableId();
         int pgId = pid.getPageNumber();
@@ -102,10 +103,29 @@ public class BufferPool {
         }
         DbFile heapFile = Database.getCatalog().getDatabaseFile(tableId);
         page = heapFile.readPage(pid);
+        if (page == null) {
+            return null;
+        }
         putCachePage(page, tableId, pgId);
         return page;
     }
 
+    private boolean tryAcquireLock(PageId pageId, TransactionId tid, LockManager.LockType type, int timeoutMs) {
+        long start = System.currentTimeMillis();
+        while (true) {
+            if (System.currentTimeMillis() - start >= timeoutMs) {
+                return false;
+            }
+            if (this.lockManager.acquireLock(pageId, tid, type)) {
+                return true;
+            }
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
     private int getCachePageNumber(int tableId) {
         Map<Integer, Page> tablePages = hashPages.get(tableId);
         if (tablePages != null) {
@@ -133,17 +153,24 @@ public class BufferPool {
             }
         }
     }
-    private void putCachePage(Page page, int tableId, int pageId) {
+    private void putCachePage(Page page, int tableId, int pageId) throws DbException {
         Map<Integer, Page> tablePages = hashPages.get(tableId);
-        if (page != null && currentNumPages < maxNumPages) {
+
+        if (page != null) {
             if (tablePages == null) {
                 tablePages = new HashMap<>();
                 hashPages.put(tableId, tablePages);
             }
             if (tablePages.get(pageId) == null) {
+                if (currentNumPages >= maxNumPages) {
+                    evictPage();
+                }
+                if (currentNumPages >= maxNumPages) {
+                    throw new DbException("page cache full");
+                }
+                tablePages.put(pageId, page);
                 currentNumPages++;
             }
-            tablePages.put(pageId, page);
         }
     }
     /**
@@ -298,7 +325,12 @@ public class BufferPool {
         int pgId = pid.getPageNumber();
         HeapPage heapPage = (HeapPage) getCachePage(tableId, pgId);
         HeapFile heapFile = (HeapFile) Database.getCatalog().getDatabaseFile(tableId);
-        heapFile.writePage(heapPage);
+        if (heapPage != null) {
+            heapFile.writePage(heapPage);
+            if (heapPage.isDirty() != null) {
+                heapPage.markDirty(false, null);
+            }
+        }
     }
 
     /** Write all pages of the specified transaction to disk.
@@ -319,6 +351,17 @@ public class BufferPool {
     private synchronized  void evictPage() throws DbException {
         // some code goes here
         // not necessary for lab1
+        List<Page> pageList = new ArrayList<>();
+        for (Map<Integer, Page> tablePages : this.hashPages.values()) {
+            for (Page page : tablePages.values()) {
+                pageList.add(page);
+            }
+        }
+        for (Page page : pageList) {
+            if (page.isDirty() == null) {
+                discardPage(page.getId());
+            }
+        }
     }
 
 }
