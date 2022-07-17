@@ -83,7 +83,7 @@ public class BufferPool {
      * @param pid the ID of the requested page
      * @param perm the requested permissions on the page
      */
-    public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
+    public Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
         // some code goes here
         LockManager.LockType lockType;
@@ -92,9 +92,8 @@ public class BufferPool {
         } else {
             lockType = LockManager.LockType.WRITE_LOCK;
         }
-        if (!tryAcquireLock(pid, tid, lockType, 1000)) {
-            throw new TransactionAbortedException();
-        }
+        acquireLockBlock(pid, tid, lockType);
+
         int tableId = pid.getTableId();
         int pgId = pid.getPageNumber();
         Page page = getCachePage(tableId, pgId);
@@ -110,17 +109,13 @@ public class BufferPool {
         return page;
     }
 
-    private boolean tryAcquireLock(PageId pageId, TransactionId tid, LockManager.LockType type, int timeoutMs) {
-        long start = System.currentTimeMillis();
+    private void acquireLockBlock(PageId pageId, TransactionId tid, LockManager.LockType type) throws TransactionAbortedException {
         while (true) {
-            if (System.currentTimeMillis() - start >= timeoutMs) {
-                return false;
-            }
             if (this.lockManager.acquireLock(pageId, tid, type)) {
-                return true;
+                return;
             }
             try {
-                Thread.sleep(100);
+                Thread.sleep(10);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
