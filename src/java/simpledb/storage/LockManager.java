@@ -99,7 +99,9 @@ public class LockManager {
         // save the size before modified.
         int graphSize = clonedGraph.size();
         List<TransactionId> topologySort = findZeroIndegreeNode(clonedGraph);
-        if (topologySort.size() == graphSize) {
+
+        // if the node is in topology sort list, the node don't belong to a cycle.
+        if (topologySort.contains(node)) {
             return false;
         }
         return true;
